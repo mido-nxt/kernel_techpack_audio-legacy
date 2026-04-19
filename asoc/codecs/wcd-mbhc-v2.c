@@ -29,6 +29,18 @@
 void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 			  struct snd_soc_jack *jack, int status, int mask)
 {
+	/*
+	 * Android 16 InputFlinger strictly validates EV_SW event codes against
+	 * the input device's declared capabilities and aborts (SIGABRT) if it
+	 * receives SW_UNSUPPORT_INSERT (EV_SW code 0x14 = SND_JACK_UNSUPPORTED).
+	 * Strip SND_JACK_UNSUPPORTED from both status and mask when reporting to
+	 * the headset jack so the input device never declares nor emits that
+	 * switch code, preventing system_server bootloops on Android 16 / LOS 23.
+	 */
+	if (jack == &mbhc->headset_jack) {
+		status &= ~SND_JACK_UNSUPPORTED;
+		mask &= ~SND_JACK_UNSUPPORTED;
+	}
 	snd_soc_jack_report(jack, status, mask);
 }
 EXPORT_SYMBOL(wcd_mbhc_jack_report);
